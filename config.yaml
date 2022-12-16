@@ -6,7 +6,7 @@ num_blocks: 6
 num_bilinear: 8
 num_spherical: 7
 num_radial: 6
-output_init: 'GlorotOrthogonal'  # 'zeros' for Mu, HOMO, LUMO, and ZPVE; 'GlorotOrthogonal' for alpha, R2, U0, U, H, G, and Cv
+output_init: "GlorotOrthogonal" # 'zeros' for Mu, HOMO, LUMO, and ZPVE; 'GlorotOrthogonal' for alpha, R2, U0, U, H, G, and Cv
 
 cutoff: 5.0
 envelope_exponent: 5
@@ -15,10 +15,10 @@ num_before_skip: 1
 num_after_skip: 2
 num_dense_output: 3
 
-num_train: 110000
+num_train: 50000
 num_valid: 10000
 data_seed: 42
-dataset: "data/qm9_eV.npz"
+dataset: "data/aspirin_dft.npz"
 logdir: "."
 
 num_steps: 3000000
@@ -34,4 +34,4 @@ evaluation_interval: 10000
 save_interval: 10000
 restart: None
 comment: "final"
-targets: ['U0']  # ['mu', 'alpha', 'homo', 'lumo', 'gap', 'r2', 'zpve', 'U0', 'U', 'H', 'G', 'Cv']
+targets: ["E"] # ['mu', 'alpha', 'homo', 'lumo', 'gap', 'r2', 'zpve', 'U0', 'U', 'H', 'G', 'Cv']

@@ -10,16 +10,20 @@ class DataContainer:
         data_dict = np.load(filename, allow_pickle=True)
         self.cutoff = cutoff
         self.target_keys = target_keys
-        for key in ['id', 'N', 'Z', 'R']:
+        for key in ['E', 'F', 'R', 'z']:
             if key in data_dict:
                 setattr(self, key, data_dict[key])
             else:
                 setattr(self, key, None)
-        self.targets = np.stack([data_dict[key] for key in self.target_keys], axis=1)
+        # self.targets = np.stack([data_dict[key] for key in self.target_keys], axis=1)
+        # self.targets = self.E[:, None]
+        self.targets = self.E
+        # print('target shape:', self.targets.shape)
+        self.N = self.z.shape[0]
 
-        if self.N is None:
-            self.N = np.zeros(len(self.targets), dtype=np.int32)
-        self.N_cumsum = np.concatenate([[0], np.cumsum(self.N)])
+        # if self.N is None:
+        #     self.N = np.zeros(len(self.targets), dtype=np.int32)
+        # self.N_cumsum = np.concatenate([[0], np.cumsum(self.N)])
 
         assert self.R is not None
 
@@ -46,25 +50,35 @@ class DataContainer:
 
         data = {}
         data['targets'] = self.targets[idx]
-        data['id'] = self.id[idx]
-        data['N'] = self.N[idx]
+        # data['id'] = self.id[idx]
+        data['N'] = np.repeat(self.N, len(idx))
         data['batch_seg'] = np.repeat(np.arange(len(idx), dtype=np.int32), data['N'])
         adj_matrices = []
 
-        data['Z'] = np.zeros(np.sum(data['N']), dtype=np.int32)
-        data['R'] = np.zeros([np.sum(data['N']), 3], dtype=np.float32)
+        # data['Z'] = np.zeros(np.sum(data['N']), dtype=np.int32)
+        # data['Z'] = np.repeat(self.z, len(idx))
+        data['Z'] = np.repeat(self.z[None, :], len(idx), axis=0).flatten().astype(np.int32)
+        # data['R'] = np.zeros([np.sum(data['N']), 3], dtype=np.float32)
+        data['R'] = self.R[idx].reshape(len(idx)*self.z.shape[0], 3).astype(np.float32)
+        data['F'] = self.F[idx].reshape(len(idx)*self.z.shape[0], 3).astype(np.float32)
 
-        nend = 0
+        # nend = 0
         for k, i in enumerate(idx):
             n = data['N'][k]  # number of atoms
-            nstart = nend
-            nend = nstart + n
+            # nstart = nend
+            # nend = nstart + n
 
-            if self.Z is not None:
-                data['Z'][nstart:nend] = self.Z[self.N_cumsum[i]:self.N_cumsum[i + 1]]
+            # if self.z is not None:
+            #     # data['Z'][nstart:nend] = self.Z[self.N_cumsum[i]:self.N_cumsum[i + 1]]
+            #     # print('self.z', self.z, self.z.shape)
+            #     print('data z', data['Z'].shape)
+            #     print("data['Z'][nstart:nend]", data['Z'][nstart:nend])
+            #     print('start: ', nstart, 'end: ', nend)
+            #     data['Z'][nstart:nend] = self.z
 
-            R = self.R[self.N_cumsum[i]:self.N_cumsum[i + 1]]
-            data['R'][nstart:nend] = R
+            # R = self.R[self.N_cumsum[i]:self.N_cumsum[i + 1]]
+            R = self.R[i]
+            # data['R'][nstart:nend] = R
 
             Dij = np.linalg.norm(R[:, None, :] - R[None, :, :], axis=-1)
             adj_matrices.append(sp.csr_matrix(Dij <= self.cutoff))

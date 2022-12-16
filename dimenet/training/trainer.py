@@ -52,43 +52,66 @@ class Trainer:
         for var, bck in zip(self.model.trainable_weights, self.backup_vars):
             var.assign(bck)
 
+    def get_mae(self, targets, preds):
+        """
+        Mean Absolute Error
+        """
+        mae = tf.reduce_mean(tf.abs(targets - preds), axis=0)
+        mean_mae = tf.reduce_mean(mae)
+        return mean_mae, mae
+
     @tf.function
     def train_on_batch(self, dataset_iter, metrics):
-        inputs, targets = next(dataset_iter)
-        with tf.GradientTape() as tape:
-            preds = self.model(inputs, training=True)
-            mae = tf.reduce_mean(tf.abs(targets - preds), axis=0)
-            mean_mae = tf.reduce_mean(mae)
-            loss = mean_mae
+        inputs, energy_targets = next(dataset_iter)
+        
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(inputs["R"])
+            energy_preds = self.model(inputs, training=True)
+            energy_mean_mae, energy_mae = self.get_mae(energy_targets, energy_preds)
+            force_preds = -tape.gradient(tf.reduce_mean(energy_preds), inputs["R"])
+            force_mean_mae, force_mae = self.get_mae(inputs["F"], force_preds)
+            rho = 100
+            loss = energy_mean_mae + rho * force_mean_mae
         self.update_weights(loss, tape)
+        del tape
 
-        nsamples = tf.shape(preds)[0]
-        metrics.update_state(loss, mean_mae, mae, nsamples)
+        nsamples = tf.shape(energy_preds)[0]
+        metrics.update_state(loss, energy_mean_mae, energy_mae, force_mean_mae, nsamples)
 
         return loss
 
     @tf.function
     def test_on_batch(self, dataset_iter, metrics):
-        inputs, targets = next(dataset_iter)
-        preds = self.model(inputs, training=False)
-        mae = tf.reduce_mean(tf.abs(targets - preds), axis=0)
-        mean_mae = tf.reduce_mean(mae)
-        loss = mean_mae
+        inputs, energy_targets = next(dataset_iter)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(inputs["R"])
+            energy_preds = self.model(inputs, training=False)
+            energy_mean_mae, energy_mae = self.get_mae(energy_targets, energy_preds)
+            force_preds = -tape.gradient(tf.reduce_mean(energy_preds), inputs["R"])
+            force_mean_mae, force_mae = self.get_mae(inputs["F"], force_preds)
+            rho = 100
+            loss = energy_mean_mae + rho * force_mean_mae
 
-        nsamples = tf.shape(preds)[0]
-        metrics.update_state(loss, mean_mae, mae, nsamples)
+        del tape
+        nsamples = tf.shape(energy_preds)[0]
+        metrics.update_state(loss, energy_mean_mae, energy_mae, force_mean_mae, nsamples)
 
         return loss
 
     @tf.function
     def predict_on_batch(self, dataset_iter, metrics):
-        inputs, targets = next(dataset_iter)
-        preds = self.model(inputs, training=False)
+        inputs, energy_targets = next(dataset_iter)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(inputs["R"])
+            energy_preds = self.model(inputs, training=False)
+            energy_mean_mae, energy_mae = self.get_mae(energy_targets, energy_preds)
+            force_preds = -tape.gradient(tf.reduce_mean(energy_preds), inputs["R"])
+            force_mean_mae, force_mae = self.get_mae(inputs["F"], force_preds)
+            rho = 100
+            loss = energy_mean_mae + rho * force_mean_mae
 
-        mae = tf.reduce_mean(tf.abs(targets - preds), axis=0)
-        mean_mae = tf.reduce_mean(mae)
-        loss = mean_mae
-        nsamples = tf.shape(preds)[0]
-        metrics.update_state(loss, mean_mae, mae, nsamples)
+        del tape
+        nsamples = tf.shape(energy_preds)[0]
+        metrics.update_state(loss, energy_mean_mae, energy_mae, force_mean_mae, nsamples)
 
-        return preds
+        return energy_preds # TO ADD FORCE!!!

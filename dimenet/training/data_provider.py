@@ -32,6 +32,7 @@ class DataProvider:
         self.dtypes_input = OrderedDict()
         self.dtypes_input['Z'] = tf.int32
         self.dtypes_input['R'] = tf.float32
+        self.dtypes_input['F'] = tf.float32
         for key in index_keys:
             self.dtypes_input[key] = tf.int32
         self.dtype_target = tf.float32
@@ -40,6 +41,7 @@ class DataProvider:
         self.shapes_input = {}
         self.shapes_input['Z'] = [None]
         self.shapes_input['R'] = [None, 3]
+        self.shapes_input['F'] = [None, 3]
         for key in index_keys:
             self.shapes_input[key] = [None]
         self.shape_target = [None, len(data_container.target_keys)]

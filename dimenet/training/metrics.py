@@ -12,11 +12,13 @@ class Metrics:
         self.mean_mae_metric = tf.keras.metrics.Mean()
         self.maes_metric = tf.keras.metrics.MeanTensor()
         self.maes_metric.update_state([0] * len(targets), sample_weight=[0] * len(targets))
+        self.force_mean_mae_metric = tf.keras.metrics.Mean()
 
-    def update_state(self, loss, mean_mae, mae, nsamples):
+    def update_state(self, loss, mean_mae, mae, force_mean_mae, nsamples):
         self.loss_metric.update_state(loss, sample_weight=nsamples)
         self.mean_mae_metric.update_state(mean_mae, sample_weight=nsamples)
         self.maes_metric.update_state(mae, sample_weight=nsamples)
+        self.force_mean_mae_metric.update_state(force_mean_mae, sample_weight=nsamples)
 
     def write(self):
         """Write metrics to tf.summary and the Sacred experiment."""
@@ -36,9 +38,10 @@ class Metrics:
         self.loss_metric.reset_states()
         self.mean_mae_metric.reset_states()
         self.maes_metric.reset_states()
+        self.force_mean_mae_metric.reset_states()
 
     def keys(self):
-        keys = [f'loss_{self.tag}', f'mean_mae_{self.tag}', f'mean_log_mae_{self.tag}']
+        keys = [f'loss_{self.tag}', f'mean_mae_{self.tag}', f'mean_log_mae_{self.tag}', f'force_mean_mae_{self.tag}']
         keys.extend([key + '_' + self.tag for key in self.targets])
         return keys
 
@@ -47,6 +50,7 @@ class Metrics:
         result_dict[f'loss_{self.tag}'] = self.loss
         result_dict[f'mean_mae_{self.tag}'] = self.mean_mae
         result_dict[f'mean_log_mae_{self.tag}'] = self.mean_log_mae
+        result_dict[f'force_mean_mae_{self.tag}'] = self.force_mean_mae
         for i, key in enumerate(self.targets):
             result_dict[key + '_' + self.tag] = self.maes[i].item()
         return result_dict
@@ -66,3 +70,7 @@ class Metrics:
     @property
     def mean_log_mae(self):
         return np.mean(np.log(self.maes)).item()
+
+    @property
+    def force_mean_mae(self):
+        return self.force_mean_mae_metric.result().numpy().item()
